@@ -1,0 +1,165 @@
+package pe.uni.fiis.dirigida.exception;
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.ss.util.CellRangeAddress;
+
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.Calendar;
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * Created by iisoft_user2 on 30/05/2015.
+ */
+public class Excel {
+
+    private static final String[]  caracteristicas = {
+            "Vuelo", "Transporte", "Lugar","Hora","Estado"};
+
+    private static final String[] Tipos = {
+            "Partidas","Llegadas"};
+
+    private static Object[][] datos = {
+            {"AA 4229", "American Airlines","(BNA) Nashville", "3:05 PM","En Ruta"},
+            {"JJ 8386 ^", "TAM Linhas Aereas", "(MID) Merida","5:10 PM", "Programado"},
+    };
+
+    public static void main(String[] args) throws FileNotFoundException {
+
+        Calendar horario = Calendar.getInstance();
+        boolean xls = true;
+        for (int i = 0; i < args.length; i++) {
+            if (args[i].charAt(0) == '-') {
+                xls = args[i].equals("xls");
+            } else {
+                horario.set(Calendar.YEAR, Integer.parseInt(args[i]));
+            }
+        }
+        int year = horario.get(Calendar.YEAR);
+
+        Workbook wb = new HSSFWorkbook();
+        FileOutputStream fileOut = new FileOutputStream("E:\\excel\\horario.xls");
+        try {
+            Map<String, CellStyle> styles = createStyles(wb);
+            for (int tipo = 0; tipo < 2; tipo++) {
+                horario.set(Calendar.MONTH, tipo);
+                horario.set(Calendar.DAY_OF_MONTH, 1);
+                Sheet sheet = wb.createSheet(Tipos[tipo]);
+
+                sheet.setDisplayGridlines(false);
+                sheet.setPrintGridlines(false);
+                sheet.setFitToPage(true);
+                sheet.setHorizontallyCenter(true);
+                PrintSetup printSetup = sheet.getPrintSetup();
+                printSetup.setLandscape(true);
+
+                sheet.setAutobreaks(true);
+                printSetup.setFitHeight((short) 1);
+                printSetup.setFitWidth((short) 1);
+
+                Row headerRow = sheet.createRow(0);
+                for (int i=0;i<5;i++) {
+                    sheet.setColumnWidth(i,30*256);
+                    headerRow.setHeightInPoints(50);
+
+                    Cell titleCell = headerRow.createCell(0);
+                    titleCell.setCellValue(Tipos[tipo] + " " + year);
+                    titleCell.setCellStyle(styles.get("title"));
+                    sheet.addMergedRegion(CellRangeAddress.valueOf("$A$1:$E$1"));
+                }
+
+                Row tipoRow = sheet.createRow(1);
+                for (int i = 0; i < caracteristicas.length; i++) {
+                    tipoRow.setHeightInPoints(30);
+                    Cell tipoCell = tipoRow.createCell(i);
+                    tipoCell.setCellValue(caracteristicas[i]);
+                    tipoCell.setCellStyle(styles.get("tipo"));
+                }
+
+                int cnt = 1, caracteristica = 1;
+                int rownum = 2;
+                for (int j = 0; j < 10; j++) {
+                    Row row = sheet.createRow(rownum++);
+                    row.setHeightInPoints(25);
+
+                    for (int i = 0; i < caracteristicas.length; i++) {
+                        Cell caracteristicaCell_1 = row.createCell(i );
+                        Cell caracteristicaCell_2 = row.createCell(i);
+
+                        caracteristicaCell_1.setCellStyle(styles.get("weekend_left"));
+                        caracteristicaCell_2.setCellStyle(styles.get("weekend_right"));
+                    }
+                    cnt++;
+                }
+                if (horario.get(Calendar.MONTH) > tipo) break;
+
+            }
+
+            wb.write(fileOut);
+            fileOut.close();
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    private static Map<String,CellStyle> createStyles(Workbook wb) {
+        Map<String, CellStyle> styles = new HashMap<String, CellStyle>();
+
+        CellStyle style;
+        Font titleFont = wb.createFont();
+        titleFont.setFontHeightInPoints((short)25);
+        titleFont.setBoldweight(Font.BOLDWEIGHT_BOLD);
+        titleFont.setColor(IndexedColors.WHITE.getIndex());
+        style = wb.createCellStyle();
+        style.setAlignment(CellStyle.ALIGN_CENTER);
+        style.setVerticalAlignment(CellStyle.VERTICAL_CENTER);
+        style.setFillForegroundColor(IndexedColors.BLACK.getIndex());
+        style.setFillPattern(CellStyle.SOLID_FOREGROUND);
+        style.setFont(titleFont);
+        styles.put("title", style);
+
+        Font tipoFont = wb.createFont();
+        tipoFont.setFontHeightInPoints((short)15);
+        tipoFont.setColor(IndexedColors.WHITE.getIndex());
+        tipoFont.setBoldweight(Font.BOLDWEIGHT_BOLD);
+        style = wb.createCellStyle();
+        style.setAlignment(CellStyle.ALIGN_CENTER);
+        style.setVerticalAlignment(CellStyle.VERTICAL_CENTER);
+        style.setFillForegroundColor(IndexedColors.GREY_50_PERCENT.getIndex());
+        style.setFillPattern(CellStyle.SOLID_FOREGROUND);
+        style.setFont(tipoFont);
+        styles.put("tipo", style);
+
+        Font caracteristicaFont = wb.createFont();
+        caracteristicaFont.setFontHeightInPoints((short) 50);
+
+        caracteristicaFont.setBoldweight(Font.BOLDWEIGHT_BOLD);
+        style = wb.createCellStyle();
+        style.setAlignment(CellStyle.ALIGN_LEFT);
+        style.setVerticalAlignment(CellStyle.VERTICAL_TOP);
+        style.setFillForegroundColor(IndexedColors.BLACK.getIndex());
+        style.setFillPattern(CellStyle.SOLID_FOREGROUND);
+        style.setBorderLeft(CellStyle.BORDER_THIN);
+        style.setBorderBottom(CellStyle.BORDER_THIN);
+        style.setFont(caracteristicaFont);
+        styles.put("weekend_left", style);
+
+        style = wb.createCellStyle();
+        style.setAlignment(CellStyle.ALIGN_CENTER);
+        style.setVerticalAlignment(CellStyle.VERTICAL_TOP);
+        style.setFillForegroundColor(IndexedColors.WHITE.getIndex());
+        style.setFillPattern(CellStyle.SOLID_FOREGROUND);
+
+        style.setBorderRight(CellStyle.BORDER_THIN);
+        style.setBorderBottom(CellStyle.BORDER_THIN);
+        style.setBorderTop(CellStyle.BORDER_THIN);
+        styles.put("weekend_right", style);
+
+        return styles;
+
+    }
+}
